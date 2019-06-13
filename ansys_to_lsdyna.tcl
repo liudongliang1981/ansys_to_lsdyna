@@ -507,6 +507,7 @@ proc ::hm::MyTab::do_to_lsdyna { args } {
 			puts "skip $id : { $value}"
 		}
 	}
+	puts ""
 	return 1
 }
 
