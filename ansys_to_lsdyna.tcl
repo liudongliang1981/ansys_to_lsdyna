@@ -170,7 +170,7 @@ proc ::hm::MyTab::Main { args } {
         pack $frame2 -side top -anchor nw -fill x ;
 			#~ ::hwtk::button $frame2.change_name -text "change name" -help "change name" -command { ::hm::MyTab::change_name } 
 			::hwtk::button $frame2.add_node3_comp -text "add node3 by comp" -help "add node3 by comp" -command { ::hm::MyTab::add_node3_for_lsdyna_comp }
-			::hwtk::button $frame2.add_node3_all -text "add node3 all" -help "add node3 all" -command { ::hm::MyTab::add_node3_for_lsdyna_all }
+			::hwtk::button $frame2.add_node3_all -text "add node3 by elem" -help "add node3 by elem" -command { ::hm::MyTab::add_node3_for_lsdyna_elem }
 			::hwtk::button $frame2.output_ansys -text "output ansys" -help "output ansys" -command { ::hm::MyTab::output_ansys }
 			::hwtk::button $frame2.input_lsdyna -text "input lsdyna" -help "input lsdyna" -command { ::hm::MyTab::input_lsdyna }
 			#~ grid $frame2.change_name 
@@ -260,12 +260,17 @@ proc ::hm::MyTab::add_node3_for_lsdyna_comp { } {
 	##
 	set state [ hm_commandfilestate 0]
 	hm_blockmessages 1
+	*retainmarkselections 0
 	##
 	if { [ is_template ansys] } {
 		*createmarkpanel comps 1 "select comps..."
 		set comps [ hm_getmark comps 1 ]
 		*clearmark comps 1
-		DoAdd_3_node_to_beam_for_lsdyna	$comps
+		if { $comps != "" } {
+			*entityhighlighting 0
+			DoAdd_3_node_to_beam_for_lsdyna_comp $comps
+			*entityhighlighting 1
+		}
 	} else {
 		hm_errormessage "Please make sure in ansys template now!"
 	}
@@ -280,19 +285,25 @@ proc ::hm::MyTab::DoAdd_3_node_to_beam_for_lsdyna_comp { comp } {
 	set beams [ hm_getmark elems 1 ]
 	*clearmark elems 1
 	
-	foreach eid $beam {
-		add_n3_to_beam $eid 1
-	}
+	DoAdd_3_node_to_beam_for_lsdyna_elem $beams
 }
 
 
-proc ::hm::MyTab::add_node3_for_lsdyna_all { } {
+proc ::hm::MyTab::add_node3_for_lsdyna_elem { } {
 	##
 	set state [ hm_commandfilestate 0]
 	hm_blockmessages 1
+	*retainmarkselections 0
 	##
 	if { [ is_template ansys] } {
-		DoAdd_3_node_to_beam_for_lsdyna_all
+		*createmarkpanel elems 1 "select beam elems..."
+		set elems [ hm_getmark elems 1 ]
+		*clearmark elems 1
+		if { $elems != "" } {
+			*entityhighlighting 0
+			DoAdd_3_node_to_beam_for_lsdyna_elem $elems
+			*entityhighlighting 1
+		}
 	} else {
 		hm_errormessage "Please make sure in ansys template now!"
 	}
@@ -302,77 +313,53 @@ proc ::hm::MyTab::add_node3_for_lsdyna_all { } {
 	##
 }
 
-proc ::hm::MyTab::DoAdd_3_node_to_beam_for_lsdyna_all { } {
-	*createmark elems 1 "by config" bar2
-	set beams [ hm_getmark elems 1 ]
-	*clearmark elems 1
-	
-	foreach eid $beam {
-		add_n3_to_beam $eid 1
-	}
+proc ::hm::MyTab::DoAdd_3_node_to_beam_for_lsdyna_elem {  elems } {
+	puts "add node3 for [llength $elems]  beam elements"
+	set temp [ time {
+			foreach eid $elems {
+				add_n3_to_beam $eid 1
+			}
+		} ]
+	puts [format "It took %.3f seconds."  [expr [lindex $temp 0] / 1000000.0] ]
 }
 
 proc ::hm::MyTab::add_n3_to_beam { id y_dir } {
-	if { [ hm_getvalue elems id=$id dataname=config ] != 60 } { return }
-	if { [ hm_getvalue elems id=$id dataname=nodecount] == 3 } { return }
-	if { $y_dir == 1 } {
-		set vx [ hm_getvalue elems id=$id dataname=localyx ]
-		set vy [ hm_getvalue elems id=$id dataname=localyy ]
-		set vz [ hm_getvalue elems id=$id dataname=localyz ]
-	} else {
-		set vx [ hm_getvalue elems id=$id dataname=localzx ]
-		set vy [ hm_getvalue elems id=$id dataname=localzy ]
-		set vz [ hm_getvalue elems id=$id dataname=localzz ]
+	if { [ hm_getvalue elems id=$id dataname=config ] == 60 &&  [ hm_getvalue elems id=$id dataname=directionnodeused] == 0 } { 
+		if { $y_dir == 1 } {
+			set vx [ hm_getvalue elems id=$id dataname=localyx ]
+			set vy [ hm_getvalue elems id=$id dataname=localyy ]
+			set vz [ hm_getvalue elems id=$id dataname=localyz ]
+		} else {
+			set vx [ hm_getvalue elems id=$id dataname=localzx ]
+			set vy [ hm_getvalue elems id=$id dataname=localzy ]
+			set vz [ hm_getvalue elems id=$id dataname=localzz ]
+		}
+		set v [list $vx $vy $vz ]
+		set node1 [ hm_getvalue elems id=$id dataname=node1 ] 
+		set node1_p [ hm_getvalue nodes id=$node1 dataname=coordinates ]
+		set n3x [ expr [lindex $node1_p 0]+ 10*$vx]
+		set n3y [ expr [lindex $node1_p 1]+ 10*$vy]
+		set n3z [ expr [lindex $node1_p 2]+ 10*$vz]
+		set node3 [ CreateNode [list $n3x $n3y $n3z ] ]
+		*createmark elements 1 $id
+		*createvector 1 1 0 0
+		*barelementupdatewithoffsets 1 0 0 1 0 0 0 0 "" 1 $node3 0 0 0 0 0 0 0 0 0 0 0
+		*createmark nodes 1 $node3
+		*nodemarkcleartempmark 1
 	}
-	set v [list $vx $vy $vz ]
-	set node1 [ hm_getvalue elems id=$id dataname=node1 ] 
-	set node1_p [ hm_getvalue nodes id=$node1 dataname=coordinates ]
-	set node3 [ CreateNode [ AddVector $node1_p [ScaleVector $v 10] ] ]
-	*createmark elements 1 $id
-	*createvector 1 1 0 0
-	*barelementupdatewithoffsets 1 0 0 1 0 0 0 0 "" 1 $node3 0 0 0 0 0 0 0 0 0 0 0
-	*createmark nodes 1 $node3
-	*nodemarkcleartempmark 1
 }
 
 proc ::hm::MyTab::CreateNode { pos } {
 	eval *createnode $pos 0 0 0
-	return [TheLast nodes]
+	set ans [TheLast nodes];
+	set ans;
 }
 
 proc ::hm::MyTab::TheLast { type } {
 	*createmark $type 1 -1
 	set id [ hm_getmark $type 1]
 	*clearmark $type 1
-	return $id
-}
-
-proc ::hm::MyTab::AddVector { vector1 vector2 } {
-    set a1 [lindex $vector1 0]
-    set a2 [lindex $vector1 1]
-    set a3 [lindex $vector1 2]
-    
-    set b1 [lindex $vector2 0]
-    set b2 [lindex $vector2 1]
-    set b3 [lindex $vector2 2]
-    
-    set c1 [expr $a1 + $b1]
-    set c2 [expr $a2 + $b2]
-    set c3 [expr $a3 + $b3]
-    
-    return [list $c1 $c2 $c3]
-}
-
-proc ::hm::MyTab::ScaleVector { vector1 alph } {
-    set a1 [lindex $vector1 0]
-    set a2 [lindex $vector1 1]
-    set a3 [lindex $vector1 2]
-    
-    set c1 [expr $a1 * $alph]
-    set c2 [expr $a2 * $alph]
-    set c3 [expr $a3 * $alph]
-    
-    return [list $c1 $c2 $c3]
+	set id;
 }
 
 #################################################################
