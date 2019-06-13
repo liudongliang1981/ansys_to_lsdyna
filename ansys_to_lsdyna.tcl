@@ -127,37 +127,58 @@ proc ::hm::MyTab::Main { args } {
     # Notes:
 	
     variable m_recess;
-	variable m_file;
 	variable m_width 12;
+	
+	variable m_mass_unit "ton";
+	variable m_mass_factor 1;
+	variable m_length_unit "mm";
+	variable m_length_factor 1;
+	variable m_time_unit "s";
+	variable m_time_factor 1;
     
     # Create the GUI
     if [::hm::MyTab::DialogCreate] {
         # Create the frame1
-		set frame1 [labelframe $m_recess.frame1 -text "Units" ];
+		set frame1 [labelframe $m_recess.frame1 -text "Units and scale factor" ];
         pack $frame1 -side top -anchor nw -fill x ;
 			::hwtk::label $frame1.l1 -text "Mass:"
-			::hwtk::savefileentry $frame1.e1 -textvariable [namespace current]::m_file -help "mass unit" -title "select temp file"
-			grid $frame1.l1 $frame1.e1 -sticky w -pady 2 -padx 5
-			grid configure $frame1.e1 -sticky ew
+			hwtk::entry $frame1.e11 -textvariable [namespace current]::m_mass_factor -inputtype double 
+			hwtk::combobox $frame1.e12 -textvariable [namespace current]::m_mass_unit -state readonly -values {ton kg}
+			grid $frame1.l1 $frame1.e11 $frame1.e12 -sticky w -pady 2 -padx 5
+			grid configure $frame1.e11 -sticky ew
+			grid configure $frame1.e12 -sticky ew
 			
-			::hwtk::label $frame1.l1 -text "Length:"
-			::hwtk::savefileentry $frame1.e1 -textvariable [namespace current]::m_file -help "temp file name" -title "select temp file"
-			grid $frame1.l1 $frame1.e1 -sticky w -pady 2 -padx 5
-			grid configure $frame1.e1 -sticky ew
+			::hwtk::label $frame1.l2 -text "Length:"
+			hwtk::entry $frame1.e21 -textvariable [namespace current]::m_length_factor -inputtype double
+			hwtk::combobox $frame1.e22 -textvariable [namespace current]::m_length_unit -state readonly -values {mm m}
+			grid $frame1.l2 $frame1.e21 $frame1.e22 -sticky w -pady 2 -padx 5
+			grid configure $frame1.e21 -sticky ew
+			grid configure $frame1.e22 -sticky ew
 			
-			hwtk::combobox $w.lf3.cb -textvariable c3var -state readonly -values $australianCities
+			::hwtk::label $frame1.l3 -text "Time:"
+			hwtk::entry $frame1.e31 -textvariable [namespace current]::m_time_factor -inputtype double
+			hwtk::combobox $frame1.e32 -textvariable [namespace current]::m_time_unit -state readonly -values {s ms}
+			grid $frame1.l3 $frame1.e31 $frame1.e32 -sticky w -pady 2 -padx 5
+			grid configure $frame1.e31 -sticky ew
+			grid configure $frame1.e32 -sticky ew
 			
 			grid columnconfigure $frame1 1  -weight 1
+			grid columnconfigure $frame1 2  -weight 1
 			
 		# Create the frame2
 		set frame2 [labelframe $m_recess.frame2 -text "Command" ];
         pack $frame2 -side top -anchor nw -fill x ;
 			#~ ::hwtk::button $frame2.change_name -text "change name" -help "change name" -command { ::hm::MyTab::change_name } 
-			::hwtk::button $frame2.output_ansys -text "output ansys" -help "output ansys" -command { ::hm::MyTab::output_ansys } 
-			::hwtk::button $frame2.input_lsdyna -text "input lsdyna" -help "input lsdyna" -command { ::hm::MyTab::input_lsdyna } 
+			::hwtk::button $frame2.add_node3_comp -text "add node3 by comp" -help "add node3 by comp" -command { ::hm::MyTab::add_node3_for_lsdyna_comp }
+			::hwtk::button $frame2.add_node3_all -text "add node3 all" -help "add node3 all" -command { ::hm::MyTab::add_node3_for_lsdyna_all }
+			::hwtk::button $frame2.output_ansys -text "output ansys" -help "output ansys" -command { ::hm::MyTab::output_ansys }
+			::hwtk::button $frame2.input_lsdyna -text "input lsdyna" -help "input lsdyna" -command { ::hm::MyTab::input_lsdyna }
 			#~ grid $frame2.change_name 
-			grid $frame2.output_ansys $frame2.input_lsdyna
-		
+			grid $frame2.add_node3_comp  $frame2.add_node3_all -sticky ew
+			grid $frame2.output_ansys $frame2.input_lsdyna -sticky ew
+			
+			grid columnconfigure $frame2 "all" -weight 1
+			
 		# Create the frame4
         set frame4 [frame $m_recess.frame4];
         pack $frame4 -side bottom -anchor nw -fill x;
@@ -235,6 +256,126 @@ proc ::hm::MyTab::change_name { args } {
 }
 
 #################################################################
+proc ::hm::MyTab::add_node3_for_lsdyna_comp { } {
+	##
+	set state [ hm_commandfilestate 0]
+	hm_blockmessages 1
+	##
+	if { [ is_template ansys] } {
+		*createmarkpanel comps 1 "select comps..."
+		set comps [ hm_getmark comps 1 ]
+		*clearmark comps 1
+		DoAdd_3_node_to_beam_for_lsdyna	$comps
+	} else {
+		hm_errormessage "Please make sure in ansys template now!"
+	}
+	##
+	hm_commandfilestate $state
+	hm_blockmessages 0
+	##
+}
+
+proc ::hm::MyTab::DoAdd_3_node_to_beam_for_lsdyna_comp { comp } {
+	eval *createmark elems 1 "by comp id" $comp
+	set beams [ hm_getmark elems 1 ]
+	*clearmark elems 1
+	
+	foreach eid $beam {
+		add_n3_to_beam $eid 1
+	}
+}
+
+
+proc ::hm::MyTab::add_node3_for_lsdyna_all { } {
+	##
+	set state [ hm_commandfilestate 0]
+	hm_blockmessages 1
+	##
+	if { [ is_template ansys] } {
+		DoAdd_3_node_to_beam_for_lsdyna_all
+	} else {
+		hm_errormessage "Please make sure in ansys template now!"
+	}
+	##
+	hm_commandfilestate $state
+	hm_blockmessages 0
+	##
+}
+
+proc ::hm::MyTab::DoAdd_3_node_to_beam_for_lsdyna_all { } {
+	*createmark elems 1 "by config" bar2
+	set beams [ hm_getmark elems 1 ]
+	*clearmark elems 1
+	
+	foreach eid $beam {
+		add_n3_to_beam $eid 1
+	}
+}
+
+proc ::hm::MyTab::add_n3_to_beam { id y_dir } {
+	if { [ hm_getvalue elems id=$id dataname=config ] != 60 } { return }
+	if { [ hm_getvalue elems id=$id dataname=nodecount] == 3 } { return }
+	if { $y_dir == 1 } {
+		set vx [ hm_getvalue elems id=$id dataname=localyx ]
+		set vy [ hm_getvalue elems id=$id dataname=localyy ]
+		set vz [ hm_getvalue elems id=$id dataname=localyz ]
+	} else {
+		set vx [ hm_getvalue elems id=$id dataname=localzx ]
+		set vy [ hm_getvalue elems id=$id dataname=localzy ]
+		set vz [ hm_getvalue elems id=$id dataname=localzz ]
+	}
+	set v [list $vx $vy $vz ]
+	set node1 [ hm_getvalue elems id=$id dataname=node1 ] 
+	set node1_p [ hm_getvalue nodes id=$node1 dataname=coordinates ]
+	set node3 [ CreateNode [ AddVector $node1_p [ScaleVector $v 10] ] ]
+	*createmark elements 1 $id
+	*createvector 1 1 0 0
+	*barelementupdatewithoffsets 1 0 0 1 0 0 0 0 "" 1 $node3 0 0 0 0 0 0 0 0 0 0 0
+	*createmark nodes 1 $node3
+	*nodemarkcleartempmark 1
+}
+
+proc ::hm::MyTab::CreateNode { pos } {
+	eval *createnode $pos 0 0 0
+	return [TheLast nodes]
+}
+
+proc ::hm::MyTab::TheLast { type } {
+	*createmark $type 1 -1
+	set id [ hm_getmark $type 1]
+	*clearmark $type 1
+	return $id
+}
+
+proc ::hm::MyTab::AddVector { vector1 vector2 } {
+    set a1 [lindex $vector1 0]
+    set a2 [lindex $vector1 1]
+    set a3 [lindex $vector1 2]
+    
+    set b1 [lindex $vector2 0]
+    set b2 [lindex $vector2 1]
+    set b3 [lindex $vector2 2]
+    
+    set c1 [expr $a1 + $b1]
+    set c2 [expr $a2 + $b2]
+    set c3 [expr $a3 + $b3]
+    
+    return [list $c1 $c2 $c3]
+}
+
+proc ::hm::MyTab::ScaleVector { vector1 alph } {
+    set a1 [lindex $vector1 0]
+    set a2 [lindex $vector1 1]
+    set a3 [lindex $vector1 2]
+    
+    set c1 [expr $a1 * $alph]
+    set c2 [expr $a2 * $alph]
+    set c3 [expr $a3 * $alph]
+    
+    return [list $c1 $c2 $c3]
+}
+
+#################################################################
 ## get ansys information
 proc ::hm::MyTab::do_get_ansys { args } {
 	variable m_get_ansys_ok;
@@ -248,9 +389,9 @@ proc ::hm::MyTab::do_get_ansys { args } {
 	*createmark $proptype 1 all
 	set myprop [ hm_getmark $proptype 1 ]
 	*clearmark $proptype 1
-	
+	puts  -nonewline "components"
 	foreach propid $myprop {
-		puts "components--$propid"
+		puts -nonewline " \[$propid\]"
 		set name [ hm_getvalue comps id=$propid dataname=name ]
 		set sensorid [ hm_getvalue comps id=$propid dataname=3081 ]
 		set propertyid [ hm_getvalue comps id=$propid dataname=propertyid ]
@@ -284,6 +425,7 @@ proc ::hm::MyTab::do_get_ansys { args } {
 	if [ dict size $m_comp] {
 		set m_get_ansys_ok 1
 	}
+	puts ""
 }
 
 proc ::hm::MyTab::get_mat { materialid } {
@@ -317,7 +459,8 @@ proc ::hm::MyTab::get_sec { propertyid } {
 		set t4 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim6 ]
 		return [ dict create name $name type $type a $a b $b t1 $t1 t2 $t2 t3 $t3 t4 $t4 ]
 	} else {
-		return [ dict create name $name type $type ]
+		set r [ hm_getvalue beamsects id=$secid dataname=beamsect_dim1 ]
+		return [ dict create name $name type $type r $r ]
 	}
 }
 
@@ -335,29 +478,53 @@ proc ::hm::MyTab::do_to_lsdyna { args } {
 	
 	if { $m_get_ansys_ok==0 } {
 		hm_errormessage "Please make output ansys first!"
-		return
+		return 0
 	}
 	
 	clear_ansys_info
 	
+	puts  -nonewline "processing component "
 	dict for { id value } $m_comp {
+		puts -nonewline " \[$id\]"
+		*setvalue comps id=$id cardimage="Part"
 		set cardimage [ dict get $value cardimage]
 		if { $cardimage=="SHELL181" } {
-			*setvalue comps id=$id cardimage="Part"
-			set matid [ CreatMat [dict get $value mat]]
+			set matid [ CreatMat [dict get $value mat] "MATL24" ]
 			*setvalue comps id=$id materialid={mats $matid}
+			set propid [ CreatSecShell [dict get $value thick]]
+			*setvalue comps id=$id propertyid={props $propid}
 		} elseif { $cardimage=="SOLID185" } {
-			
+			set matid [ CreatMat [dict get $value mat] "MATL24" ]]
+			*setvalue comps id=$id materialid={mats $matid}
+			set propid [ CreateSecSolid 1 ]
+			*setvalue comps id=$id propertyid={props $propid}
 		} elseif { $cardimage=="MASS21" } {
-			
+			UpdateMass $id  [dict get $value mass]
+			*setvalue comps id=$id propertyid={props 0}
+			*setvalue comps id=$id materialid={mats 0}
 		} elseif { $cardimage=="BEAM188" } {
-			
+			set sectype [dict get $value sec type]
+			if { $sectype == "46" } {
+				set matid [ CreatMat [dict get $value mat ] "MATL100" 2526 2527 2528 ]]
+				set propid [ CreatSecBeam  [dict get $value sec] ]
+			} elseif { $sectype == "49" } {
+				set matid [ CreatMat [dict get $value mat ] "MATL28" ]]
+				set propid [ CreatSecBeam  [dict get $value sec] ]
+			} else {
+				set matid [ CreatMat [dict get $value mat ] "MATL1" ]]
+				set propid [ CreatSecBeam  [dict get $value sec] ]
+			}
+			*setvalue comps id=$id materialid={mats $matid}
+			*setvalue comps id=$id propertyid={props $propid}
+		} else {
+			puts "skip $id : { $value}"
 		}
-		puts "$id : { $value}"
 	}
+	return 1
 }
 
 proc ::hm::MyTab::delete_all { type } {
+	puts "removing all $type"
 	*createmark $type 1 "all"
 	catch { *deletemark $type 1 }
 }
@@ -375,35 +542,154 @@ proc ::hm::MyTab::clear_ansys_info { } {
 	*clearmarkall
 }
 
-proc ::hm::MyTab::CreatMat { mat } {
+proc ::hm::MyTab::CreatMat { mat {type "MATL24"} { densid 118} { Eid 119} {Nuid 120} } {
+	variable m_mass_factor;
+	variable m_length_factor;
+	variable m_time_factor;
+	
 	set name [ dict get $mat name]
 	if { [hm_entityinfo exist materials $name] } {
 	} else {
-		*createentity mats cardimage=MATL24 name=$name
+		set dens [ expr 1.0 * [dict get $mat dens] * $m_mass_factor / $m_length_factor ** 3 ]
+		set E [ expr 1.0 * [dict get $mat E] * $m_mass_factor / $m_length_factor /$m_time_factor ** 2 ]
+		set Nu [dict get $mat Nu ]
+		*createentity mats cardimage=$type name=$name
 		*setvalue mats name=$name STATUS=2 90=1
-		*setvalue mats id=1 STATUS=1 118=[dict get $mat dens]
-		*setvalue mats id=1 STATUS=1 119=[dict get $mat E ]
-		*setvalue mats id=1 STATUS=1 120=[dict get $mat Nu ]
+		*setvalue mats name=$name STATUS=1 $densid=$dens
+		*setvalue mats name=$name STATUS=1 $Eid=$E
+		*setvalue mats name=$name STATUS=1 $Nuid=$Nu
 	}
-	return [hm_getvalue mats name=$matname dataname=id]
+	return [hm_getvalue mats name=$name dataname=id]
 }
 
-
 proc ::hm::MyTab::CreatSecShell { data } {
-	set thick [ lindex $data 0 ]
+	variable m_length_unit;
+	variable m_length_factor;
+	
+	set thick [expr [ lindex $data 0 ] * $m_length_factor ]
 	set t [ string map { . p } $thick ]
-	set name [ format "pr_shell_%smm" $t ]
+	set name [ format "pr_shell_%s%s" $t $m_length_unit ]
 	if { [hm_entityinfo exist properties $name] } {
 	} else {
 		*createentity props cardimage=SectShll name=$name
-		*setvalue mats name=$name STATUS=2 90=1
-		*setvalue mats id=1 STATUS=1 118=[dict get $mat dens]
-		*setvalue mats id=1 STATUS=1 119=[dict get $mat E ]
-		*setvalue mats id=1 STATUS=1 120=[dict get $mat Nu ]
+		*setvalue props name=$name STATUS=1 399=2
+		*setvalue props name=$name STATUS=1 402=[expr 5.0/6.0]
+		*setvalue props name=$name STATUS=1 427=5
+		*setvalue props name=$name STATUS=1 428=1
+		*setvalue props name=$name STATUS=1 431=$thick
 	}
-	return [hm_getvalue mats name=$matname dataname=id]
+	return [hm_getvalue props name=$name dataname=id]
 }
 
+proc ::hm::MyTab::CreateSecSolid { {elform 1} } {
+	set name [ format "pr_solid_%s" $elform ]
+	if { [hm_entityinfo exist properties $name] } {
+	} else {
+		*createentity props cardimage=SectSld name=$name
+		*setvalue props name=$name STATUS=1 399=$elform
+	}
+	return [hm_getvalue props name=$name dataname=id]
+}
+
+proc ::hm::MyTab::CreatSecBeam { data } {
+	variable m_length_unit;
+	variable m_length_factor;
+		
+	set sectype [dict get $data type]
+	if { $sectype == "46" } {
+		set r [expr [dict get $data r] * $m_length_factor ]
+		set name [ string map {. p} [ format "pr_beam_d%s%s" [expr 2*$r] $m_length_unit ] ]
+		set elform 9
+		set shrf 1
+		set qr 1
+		set cst 1		
+	} elseif { $sectype == "49" } {
+		set a [expr [dict get $data a] * $m_length_factor ]
+		set b [expr [dict get $data b] * $m_length_factor ]
+		set t1 [expr [dict get $data t1] * $m_length_factor ]
+		set t2 [expr [dict get $data t2] * $m_length_factor ]
+		set t3 [expr [dict get $data t3] * $m_length_factor ]
+		set t4 [expr [dict get $data t4] * $m_length_factor ]
+		set name [ string map {. p} [ format "pr_beam_box%s-%s-%s%s" $a $b $t1 $m_length_unit ] ]
+		set elform 2
+		set shrf 1
+		set qr 2
+		set cst 0
+		
+	} else {
+		set r [expr [dict get $data r] * $m_length_factor ]
+		set name [ string map {. p} [ format "pr_beam_d%s%s" [expr 2*$r] $m_length_unit ] ]
+		set elform 1
+		set shrf 1
+		set qr 1
+		set cst 1
+	}
+	
+	if { [hm_entityinfo exist properties $name] } {
+	} else {
+		*createentity props cardimage=SectBeam name=$name
+		*setvalue props name=$name STATUS=1 399=$elform
+		*setvalue props name=$name STATUS=1 402=$shrf
+		*setvalue props name=$name STATUS=1 403=$cst
+		*setvalue props name=$name STATUS=1 429=$qr
+		if { $elform == 1 || $elform == 9 } {
+			*setvalue props name=$name STATUS=1 723=$r
+			*setvalue props name=$name STATUS=1 724=$r
+			*setvalue props name=$name STATUS=1 725=0
+			*setvalue props name=$name STATUS=1 726=0
+		} elseif { $elform == 2 } {
+			*setvalue props name=$name STATUS=2 2023=2
+			*setvalue props name=$name STATUS=2 2039="SECTION_19"
+			*setvalue props name=$name STATUS=1 2031=$a
+			*setvalue props name=$name STATUS=1 2032=$b
+			*setvalue props name=$name STATUS=1 2033=$t1
+			*setvalue props name=$name STATUS=1 2034=$t2
+			*setvalue props name=$name STATUS=1 2035=$t3
+			*setvalue props name=$name STATUS=1 2036=$t4			
+		} 
+	}
+	return [hm_getvalue props name=$name dataname=id]
+}
+
+proc ::hm::MyTab::UpdateMass { id data } {
+	variable m_mass_factor;
+	
+	set mass [ expr [lindex $data 0] * $m_mass_factor]
+	*createmark elems 1 "by comp id" $id
+	*massmagnitudeupdate 1 $mass 2
+	*clearmark elems 1
+}
+
+proc ::hm::MyTab::UpdateElemType { } {
+	puts "updating elements type..."
+	*elementtype 1 1
+	*elementtype 3 1
+	*elementtype 5 2
+	*elementtype 21 1
+	*elementtype 61 1
+	*elementtype 60 1
+	*elementtype 103 1
+	*elementtype 104 1
+	*elementtype 204 1
+	*elementtype 206 1
+	*elementtype 208 1
+	*elementtype 210 1
+	*elementtype 56 1
+	*elementtype 2 1
+	*elementtype 23 1
+	*elementtype 24 1
+	*elementtype 63 1
+	*elementtype 57 1
+	*elementtype 70 1
+	*elementtype 106 1
+	*elementtype 108 1
+	*elementtype 215 1
+	*elementtype 220 1
+	*elementtype 205 1
+	*elementtype 213 1
+	*createmark elements 1 "all"
+	catch {*elementsettypes 1}
+}
 ##########################################################################
 ### convert ansys to lsdyna
 proc ::hm::MyTab::output_ansys { args } {
@@ -430,7 +716,8 @@ proc ::hm::MyTab::input_lsdyna { args } {
 	hm_blockmessages 1
 	##
 	if { [ is_template "LS-Dyna"] } {	
-		do_to_lsdyna	
+		do_to_lsdyna
+		UpdateElemType
 	} else {
 		hm_errormessage "Please make sure in ls-dyna template now!"
 	}
