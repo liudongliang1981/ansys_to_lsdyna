@@ -140,24 +140,26 @@ proc ::hm::MyTab::Main { args } {
     if [::hm::MyTab::DialogCreate] {
         # Create the frame1
 		set frame1 [labelframe $m_recess.frame1 -text "Units and scale factor" ];
+		# state : normal disabled readonly
+		set comb_state normal
         pack $frame1 -side top -anchor nw -fill x ;
 			::hwtk::label $frame1.l1 -text "Mass:"
 			hwtk::entry $frame1.e11 -textvariable [namespace current]::m_mass_factor -inputtype double 
-			hwtk::combobox $frame1.e12 -textvariable [namespace current]::m_mass_unit -state readonly -values {ton kg}
+			hwtk::combobox $frame1.e12 -textvariable [namespace current]::m_mass_unit -state $comb_state -values {ton kg}
 			grid $frame1.l1 $frame1.e11 $frame1.e12 -sticky w -pady 2 -padx 5
 			grid configure $frame1.e11 -sticky ew
 			grid configure $frame1.e12 -sticky ew
 			
 			::hwtk::label $frame1.l2 -text "Length:"
 			hwtk::entry $frame1.e21 -textvariable [namespace current]::m_length_factor -inputtype double
-			hwtk::combobox $frame1.e22 -textvariable [namespace current]::m_length_unit -state readonly -values {mm m}
+			hwtk::combobox $frame1.e22 -textvariable [namespace current]::m_length_unit -state $comb_state -values {mm m}
 			grid $frame1.l2 $frame1.e21 $frame1.e22 -sticky w -pady 2 -padx 5
 			grid configure $frame1.e21 -sticky ew
 			grid configure $frame1.e22 -sticky ew
 			
 			::hwtk::label $frame1.l3 -text "Time:"
 			hwtk::entry $frame1.e31 -textvariable [namespace current]::m_time_factor -inputtype double
-			hwtk::combobox $frame1.e32 -textvariable [namespace current]::m_time_unit -state readonly -values {s ms}
+			hwtk::combobox $frame1.e32 -textvariable [namespace current]::m_time_unit -state $comb_state -values {s ms}
 			grid $frame1.l3 $frame1.e31 $frame1.e32 -sticky w -pady 2 -padx 5
 			grid configure $frame1.e31 -sticky ew
 			grid configure $frame1.e32 -sticky ew
@@ -508,6 +510,9 @@ proc ::hm::MyTab::do_to_lsdyna { args } {
 		}
 	}
 	puts ""
+	
+	UpdateElemType
+	
 	return 1
 }
 
@@ -705,7 +710,6 @@ proc ::hm::MyTab::input_lsdyna { args } {
 	##
 	if { [ is_template "LS-Dyna"] } {	
 		do_to_lsdyna
-		UpdateElemType
 	} else {
 		hm_errormessage "Please make sure in ls-dyna template now!"
 	}
