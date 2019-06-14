@@ -169,12 +169,12 @@ proc ::hm::MyTab::Main { args } {
 		set frame2 [labelframe $m_recess.frame2 -text "Command" ];
         pack $frame2 -side top -anchor nw -fill x ;
 			#~ ::hwtk::button $frame2.change_name -text "change name" -help "change name" -command { ::hm::MyTab::change_name } 
-			::hwtk::button $frame2.add_node3_comp -text "add node3 by comp" -help "add node3 by comp" -command { ::hm::MyTab::add_node3_for_lsdyna_comp }
-			::hwtk::button $frame2.add_node3_all -text "add node3 by elem" -help "add node3 by elem" -command { ::hm::MyTab::add_node3_for_lsdyna_elem }
+			#~ ::hwtk::button $frame2.add_node3_comp -text "add node3 by comp" -help "add node3 by comp" -command { ::hm::MyTab::add_node3_for_lsdyna_comp }
+			#~ ::hwtk::button $frame2.add_node3_all -text "add node3 by elem" -help "add node3 by elem" -command { ::hm::MyTab::add_node3_for_lsdyna_elem }
 			::hwtk::button $frame2.output_ansys -text "output ansys" -help "output ansys" -command { ::hm::MyTab::output_ansys }
 			::hwtk::button $frame2.input_lsdyna -text "input lsdyna" -help "input lsdyna" -command { ::hm::MyTab::input_lsdyna }
 			#~ grid $frame2.change_name 
-			grid $frame2.add_node3_comp  $frame2.add_node3_all -sticky ew
+			#~ grid $frame2.add_node3_comp  $frame2.add_node3_all -sticky ew
 			grid $frame2.output_ansys $frame2.input_lsdyna -sticky ew
 			
 			grid columnconfigure $frame2 "all" -weight 1
