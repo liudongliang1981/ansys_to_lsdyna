@@ -565,6 +565,7 @@ proc ::hm::MyTab::CreatSecShell { data } {
 	if { [hm_entityinfo exist properties $name] } {
 	} else {
 		*createentity props cardimage=SectShll name=$name
+		*setvalue props name=$name STATUS=2 90=1
 		*setvalue props name=$name STATUS=1 399=2
 		*setvalue props name=$name STATUS=1 402=[expr 5.0/6.0]
 		*setvalue props name=$name STATUS=1 427=5
@@ -579,6 +580,7 @@ proc ::hm::MyTab::CreateSecSolid { {elform 1} } {
 	if { [hm_entityinfo exist properties $name] } {
 	} else {
 		*createentity props cardimage=SectSld name=$name
+		*setvalue props name=$name STATUS=2 90=1
 		*setvalue props name=$name STATUS=1 399=$elform
 	}
 	return [hm_getvalue props name=$name dataname=id]
@@ -621,6 +623,7 @@ proc ::hm::MyTab::CreatSecBeam { data } {
 	if { [hm_entityinfo exist properties $name] } {
 	} else {
 		*createentity props cardimage=SectBeam name=$name
+		*setvalue props name=$name STATUS=2 90=1
 		*setvalue props name=$name STATUS=1 399=$elform
 		*setvalue props name=$name STATUS=1 402=$shrf
 		*setvalue props name=$name STATUS=1 403=$cst
