@@ -435,20 +435,26 @@ proc ::hm::MyTab::get_mat { materialid } {
 proc ::hm::MyTab::get_sec { propertyid } {
 	set name [ hm_getvalue props id=$propertyid dataname=name ] 
 	set secid [ hm_getvalue props id=$propertyid dataname=3007 ]
-	set type [ hm_getvalue beamsects id=$secid dataname=sectiontype ]
-	if { [ string equal $type "46" ] } {
-		set r [ hm_getvalue beamsects id=$secid dataname=beamsect_dim1 ]
-		return [ dict create name $name type $type r $r ]
-	} elseif { [ string equal $type "49" ] } {
-		set a [ hm_getvalue beamsects id=$secid dataname=beamsect_dim1 ]
-		set b [ hm_getvalue beamsects id=$secid dataname=beamsect_dim2 ]
-		set t1 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim3 ]
-		set t2 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim4 ]
-		set t3 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim5 ]
-		set t4 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim6 ]
-		return [ dict create name $name type $type a $a b $b t1 $t1 t2 $t2 t3 $t3 t4 $t4 ]
+	if { $secid > 0 } {
+		set type [ hm_getvalue beamsects id=$secid dataname=sectiontype ]
+		if { [ string equal $type "46" ] } {
+			set r [ hm_getvalue beamsects id=$secid dataname=beamsect_dim1 ]
+			return [ dict create name $name type $type r $r ]
+		} elseif { [ string equal $type "49" ] } {
+			set a [ hm_getvalue beamsects id=$secid dataname=beamsect_dim1 ]
+			set b [ hm_getvalue beamsects id=$secid dataname=beamsect_dim2 ]
+			set t1 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim3 ]
+			set t2 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim4 ]
+			set t3 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim5 ]
+			set t4 [ hm_getvalue beamsects id=$secid dataname=beamsect_dim6 ]
+			return [ dict create name $name type $type a $a b $b t1 $t1 t2 $t2 t3 $t3 t4 $t4 ]
+		} else {
+			set r [ hm_getvalue beamsects id=$secid dataname=beamsect_dim1 ]
+			return [ dict create name $name type $type r $r ]
+		}
 	} else {
-		set r [ hm_getvalue beamsects id=$secid dataname=beamsect_dim1 ]
+		set type 46
+		set r [ hm_getvalue props id=$propertyid dataname=2782 ]
 		return [ dict create name $name type $type r $r ]
 	}
 }
@@ -592,8 +598,8 @@ proc ::hm::MyTab::CreatSecBeam { data } {
 		
 	set sectype [dict get $data type]
 	if { $sectype == "46" } {
-		set r [expr [dict get $data r] * $m_length_factor ]
-		set name [ string map {. p} [ format "pr_beam_d%s%s" [expr 2*$r] $m_length_unit ] ]
+		set d [expr [dict get $data r] * $m_length_factor * 2 ]
+		set name [ string map {. p} [ format "pr_beam_d%s%s" $d $m_length_unit ] ]
 		set elform 9
 		set shrf 1
 		set qr 1
@@ -612,8 +618,8 @@ proc ::hm::MyTab::CreatSecBeam { data } {
 		set cst 0
 		
 	} else {
-		set r [expr [dict get $data r] * $m_length_factor ]
-		set name [ string map {. p} [ format "pr_beam_d%s%s" [expr 2*$r] $m_length_unit ] ]
+		set d [expr [dict get $data r] * $m_length_factor * 2 ]
+		set name [ string map {. p} [ format "pr_beam_d%s%s" $d $m_length_unit ] ]
 		set elform 1
 		set shrf 1
 		set qr 1
@@ -629,8 +635,8 @@ proc ::hm::MyTab::CreatSecBeam { data } {
 		*setvalue props name=$name STATUS=1 403=$cst
 		*setvalue props name=$name STATUS=1 429=$qr
 		if { $elform == 1 || $elform == 9 } {
-			*setvalue props name=$name STATUS=1 723=$r
-			*setvalue props name=$name STATUS=1 724=$r
+			*setvalue props name=$name STATUS=1 723=$d
+			*setvalue props name=$name STATUS=1 724=$d
 			*setvalue props name=$name STATUS=1 725=0
 			*setvalue props name=$name STATUS=1 726=0
 		} elseif { $elform == 2 } {
